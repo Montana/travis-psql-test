@@ -20,19 +20,15 @@ before_install:
   - sudo sed -i "s/enabled: true/enabled: false/g" /etc/elasticsearch/elasticsearch.yml || true
   - sudo systemctl start elasticsearch
   - until curl --silent -XGET --fail http://localhost:9200; do echo "Waiting for Elasticsearch..."; sleep 2; done
-
   - echo "Downloading CodeClimate test reporter..."
   - mkdir -p tmp/
   - curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 -o tmp/cc-test-reporter
   - chmod +x tmp/cc-test-reporter
-
   - echo "Verifying PostgreSQL port 5432..."
   - sudo ss -ltnp | grep 5432 || echo "Nothing is listening on port 5432"
-
   - echo "Waiting for PostgreSQL readiness..."
   - sleep 5
   - until pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER"; do echo "Waiting..."; sleep 2; done
-
   - echo "Creating test database..."
   - psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d postgres -c "CREATE DATABASE $POSTGRES_DB;" || true
 
