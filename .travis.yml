@@ -11,6 +11,10 @@ env:
 before_install:
   - sudo apt-get update
   - sudo apt-get install -y postgresql postgresql-contrib
+  - sudo apt-get -y install elasticsearch
+  - 'sudo sed -i "s/enabled: true/enabled: false/g" /etc/elasticsearch/elasticsearch.yml'
+  - sudo systemctl start elasticsearch
+  - until curl --silent -XGET --fail http://localhost:9200; do printf '...\n'; sleep 2; done
 
 before_script:
   - echo "Starting PostgreSQL manually..."
