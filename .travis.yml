@@ -1,25 +1,15 @@
-dist: noble
-language: minimal
+dist: jammy
+language: bash
 
-services:
-  - postgresql
-
-addons:
-  postgresql: "15"
-
-env:
-  global:
-    - PGUSER=postgres
-    - PGHOST=localhost
-    - PGPORT=5432
-    - PGDATABASE=testdb
+before_install:
+  - sudo apt-get update
+  - sudo apt-get install -y postgresql postgresql-contrib
 
 before_script:
-  - echo "Waiting for PostgreSQL to become available..."
-  - sleep 5
-  - until pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER"; do echo "Still waiting..."; sleep 2; done
-  - psql -c "CREATE DATABASE $PGDATABASE;" -U "$PGUSER"
+  - sudo systemctl start postgresql
+  - sudo systemctl status postgresql
+  - sudo -u postgres psql -c "CREATE DATABASE testdb;"
+  - sudo -u postgres psql -c "SELECT version();"
 
 script:
-  - echo "Running test query..."
-  - psql -d "$PGDATABASE" -c "SELECT version();" -U "$PGUSER"
+  - echo "PostgreSQL is working"
