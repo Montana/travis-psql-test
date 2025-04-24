@@ -8,19 +8,6 @@ env:
     - PGPORT=5432
     - PGDATABASE=testdb
 
-before_install:
-  - sudo apt-get update
-  - sudo apt-get install -y postgresql postgresql-contrib
-
-before_script:
-  - sudo systemctl start postgresql
-  - sudo systemctl status postgresql
-  - sudo -u postgres psql -c "CREATE DATABASE testdb;"
-  - sudo -u postgres psql -c "SELECT version();"
-
-script:
-  - echo "PostgreSQL is working"
-
 before_script:
   - echo "Checking if PostgreSQL is listening on port 5432..."
   - sudo ss -ltnp | grep 5432 || echo "Nothing is listening on port 5432"
