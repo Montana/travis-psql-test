@@ -11,12 +11,12 @@ env:
   global:
     - PGUSER=postgres
     - PGHOST=127.0.0.1
-    - PGPORT=5432
+    - PGPORT=5434
     - PGDATABASE=testdb
 
 before_script:
-  - echo "Checking if PostgreSQL is listening on port 5432..."
-  - sudo ss -ltnp | grep 5432 || echo "Nothing is listening on port 5432"
+  - echo "Checking if PostgreSQL is listening on port 5434..."
+  - sudo ss -ltnp | grep 5434 || echo "Nothing is listening on port 5432"
   - echo "Checking readiness with pg_isready..."
   - pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" || echo "pg_isready reports not ready"
   - echo "Waiting for PostgreSQL to become ready..."
