@@ -8,16 +8,26 @@ env:
     - PGPORT=5432
     - PGDATABASE=testdb
 
+before_install:
+  - sudo apt-get update
+  - sudo apt-get install -y postgresql postgresql-contrib
+
 before_script:
+  - echo "Starting PostgreSQL manually..."
+  - sudo systemctl start postgresql
+
   - echo "Checking if PostgreSQL is listening on port 5432..."
   - sudo ss -ltnp | grep 5432 || echo "Nothing is listening on port 5432"
+
   - echo "Checking readiness with pg_isready..."
   - pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" || echo "pg_isready reports not ready"
+
   - echo "Waiting for PostgreSQL to become ready..."
   - sleep 5
   - until pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER"; do echo "Waiting..."; sleep 2; done
+
   - echo "Creating test database..."
-  - psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -c "CREATE DATABASE $PGDATABASE;"
+  - psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d postgres -c "CREATE DATABASE $PGDATABASE;"
 
 script:
   - echo "Running test query on $PGDATABASE..."
