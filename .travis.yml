@@ -13,23 +13,26 @@ env:
     - POSTGRES_DB=grubpjx_test
     - NODE_OPTIONS="--max-old-space-size=6000"
     - PSQL_PAGER=""
-  
+
 before_install:
   - sudo apt-get update
-  - sudo apt-get install -y postgresql postgresql-contrib
-  - sudo apt-get -y install elasticsearch
-  - 'sudo sed -i "s/enabled: true/enabled: false/g" /etc/elasticsearch/elasticsearch.yml'
+  - sudo apt-get install -y postgresql postgresql-contrib elasticsearch
+  - sudo sed -i "s/enabled: true/enabled: false/g" /etc/elasticsearch/elasticsearch.yml || true
   - sudo systemctl start elasticsearch
-  - until curl --silent -XGET --fail http://localhost:9200; do printf '...\n'; sleep 2; done
+  - until curl --silent -XGET --fail http://localhost:9200; do echo "Waiting for Elasticsearch..."; sleep 2; done
+
   - echo "Downloading CodeClimate test reporter..."
   - mkdir -p tmp/
   - curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 -o tmp/cc-test-reporter
   - chmod +x tmp/cc-test-reporter
-  - echo "Verifying PostgreSQL port..."
-  - sudo ss -ltnp | grep 5432 || echo "Nothing on port 5432"
+
+  - echo "Verifying PostgreSQL port 5432..."
+  - sudo ss -ltnp | grep 5432 || echo "Nothing is listening on port 5432"
+
   - echo "Waiting for PostgreSQL readiness..."
   - sleep 5
   - until pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER"; do echo "Waiting..."; sleep 2; done
+
   - echo "Creating test database..."
   - psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d postgres -c "CREATE DATABASE $POSTGRES_DB;" || true
 
@@ -39,25 +42,26 @@ install:
   - bundle init
   - echo 'gem "rake"' >> Gemfile
   - bundle install
-  - echo "Simulating Node setup..."
+
+  - echo "Simulating Node project setup..."
   - mkdir -p client && cd client && npm init -y && cd ..
   - mkdir -p client/v2 && cd client/v2 && npm init -y && cd ..
 
 before_script:
-  - echo "Preparing Rails-like test environment..."
+  - echo "Preparing test environment (mocked Rails)..."
   - echo "Simulated db:test:prepare"
   - ./tmp/cc-test-reporter before-build
 
 script:
-  - echo "Running simulated build..."
-  - echo "Running test query..."
+  - echo "Running simulated build steps..."
+  - echo "Running PostgreSQL query..."
   - psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$POSTGRES_DB" -c "SELECT version();"
   - echo "Simulating asset precompilation..."
-  - touch public/assets/.precompiled
+  - mkdir -p public/assets && touch public/assets/.precompiled
   - echo "Simulated test run complete."
 
 after_script:
-  - echo "Memory usage:"
+  - echo "Max memory usage:"
   - cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || true
 
 jobs:
