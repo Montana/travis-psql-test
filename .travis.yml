@@ -17,7 +17,11 @@ env:
     - PSQL_PAGER=""
 before_install:
   - sudo apt-get update
-  - sudo apt-get install -y postgresql-contrib
+  - sudo apt-get install -y postgresql postgresql-contrib
+  - sudo apt-get -y install elasticsearch
+  - 'sudo sed -i "s/enabled: true/enabled: false/g" /etc/elasticsearch/elasticsearch.yml'
+  - sudo systemctl start elasticsearch
+  - until curl --silent -XGET --fail http://localhost:9200; do printf '...\n'; sleep 2; done
   - echo "Downloading CodeClimate test reporter..."
   - mkdir -p tmp/
   - curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 -o tmp/cc-test-reporter
@@ -26,8 +30,6 @@ before_install:
   - until pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER"; do echo "Waiting..."; sleep 2; done
   - echo "Creating test database..."
   - psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d postgres -c "CREATE DATABASE $POSTGRES_DB;" || true
-  - echo "Waiting for Elasticsearch..."
-  - until curl --silent --fail http://localhost:9200; do echo "Waiting for Elasticsearch..."; sleep 2; done
 install:
   - gem install bundler
   - bundle install
@@ -55,3 +57,7 @@ jobs:
     - stage: deploy
       if: branch = main
       script: echo "Deployment would happen here"
+branches:
+  only:
+    - main
+    - develop
