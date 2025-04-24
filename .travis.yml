@@ -1,38 +1,57 @@
 dist: jammy
-language: bash
-
+language: ruby
+rvm:
+  - 3.4.2
+services:
+  - postgresql
+  - elasticsearch
 env:
   global:
+    - RAILS_ENV=test
+    - NODE_ENV=production
     - PGUSER=postgres
     - PGHOST=127.0.0.1
     - PGPORT=5432
-    - PGDATABASE=testdb
-
+    - POSTGRES_DB=grubpjx_test
+    - NODE_OPTIONS="--max-old-space-size=6000"
+    - PSQL_PAGER=""
 before_install:
   - sudo apt-get update
-  - sudo apt-get install -y postgresql postgresql-contrib
-  - sudo apt-get -y install elasticsearch
-  - 'sudo sed -i "s/enabled: true/enabled: false/g" /etc/elasticsearch/elasticsearch.yml'
-  - sudo systemctl start elasticsearch
-  - until curl --silent -XGET --fail http://localhost:9200; do printf '...\n'; sleep 2; done
-
-before_script:
-  - echo "Starting PostgreSQL manually..."
-  - sudo systemctl start postgresql
-
-  - echo "Checking if PostgreSQL is listening on port 5432..."
-  - sudo ss -ltnp | grep 5432 || echo "Nothing is listening on port 5432"
-
-  - echo "Checking readiness with pg_isready..."
-  - pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" || echo "pg_isready reports not ready"
-
-  - echo "Waiting for PostgreSQL to become ready..."
-  - sleep 5
+  - sudo apt-get install -y postgresql-contrib
+  - echo "Downloading CodeClimate test reporter..."
+  - mkdir -p tmp/
+  - curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 -o tmp/cc-test-reporter
+  - chmod +x tmp/cc-test-reporter
+  - echo "Waiting for PostgreSQL readiness..."
   - until pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER"; do echo "Waiting..."; sleep 2; done
-
   - echo "Creating test database..."
-  - psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d postgres -c "CREATE DATABASE $PGDATABASE;"
-
+  - psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d postgres -c "CREATE DATABASE $POSTGRES_DB;" || true
+  - echo "Waiting for Elasticsearch..."
+  - until curl --silent --fail http://localhost:9200; do echo "Waiting for Elasticsearch..."; sleep 2; done
+install:
+  - gem install bundler
+  - bundle install
+  - if [ -d "client" ]; then cd client && npm install && cd ..; fi
+  - if [ -d "client/v2" ]; then cd client/v2 && npm install && cd ../..; fi
+before_script:
+  - echo "Preparing test environment..."
+  - bundle exec rake db:test:prepare || echo "Skipping db:test:prepare"
+  - ./tmp/cc-test-reporter before-build
 script:
-  - echo "Running test query on $PGDATABASE..."
-  - psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -c "SELECT version();"
+  - bundle exec rake test
+  - if [ -d "client" ]; then cd client && npm test && cd ..; fi
+after_script:
+  - ./tmp/cc-test-reporter after-build --exit-code $TRAVIS_TEST_RESULT
+cache:
+  bundler: true
+  directories:
+    - node_modules
+    - client/node_modules
+    - client/v2/node_modules
+jobs:
+  include:
+    - stage: test
+      name: "Run Tests"
+    - stage: deploy
+      if: branch = main
+      script: echo "Deployment would happen here"
