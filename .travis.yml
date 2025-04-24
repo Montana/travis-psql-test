@@ -1,0 +1,25 @@
+dist: noble
+language: minimal
+
+services:
+  - postgresql
+
+addons:
+  postgresql: "15"
+
+env:
+  global:
+    - PGUSER=postgres
+    - PGHOST=localhost
+    - PGPORT=5432
+    - PGDATABASE=testdb
+
+before_script:
+  - echo "Waiting for PostgreSQL to become available..."
+  - sleep 5
+  - until pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER"; do echo "Still waiting..."; sleep 2; done
+  - psql -c "CREATE DATABASE $PGDATABASE;" -U "$PGUSER"
+
+script:
+  - echo "Running test query..."
+  - psql -d "$PGDATABASE" -c "SELECT version();" -U "$PGUSER"
