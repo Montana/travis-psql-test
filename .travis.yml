@@ -59,15 +59,3 @@ script:
 after_script:
   - echo "Max memory usage:"
   - cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || true
-
-jobs:
-  include:
-    - name: build
-    - name: upload-coverage
-
-branches:
-  except:
-    - develop
-    - sandbox
-    - staging
-    - canary
